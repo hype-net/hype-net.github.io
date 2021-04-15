@@ -1,0 +1,127 @@
+<script src="https://theonekit.com/index.js"></script>
+
+<div id="root"></div>
+
+<script type="text/babel">
+(function() {
+
+    const {
+        One,
+        FieldType,
+        Breadcrumbs,
+    } = form;
+
+    const {
+        useState,
+    } = React;
+
+    const roundTicks = (price, tickSize) => {
+        const formatter = new Intl.NumberFormat( 'en-US', {
+            style: 'decimal',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 8
+        });
+        const precision = formatter.format( tickSize ).split( '.' )[1].length || 0;
+        if ( typeof price === 'string' ) price = parseFloat( price );
+        return price.toFixed( precision );
+    };
+
+    const SLIDER_STEP = 0.0001;
+
+    const fields = [
+        {
+            type: FieldType.Line,
+            title: 'Coin data',
+        },
+        {
+            type: FieldType.Text,
+            name: 'stepSize',
+            title: 'Step size',
+            description: 'lotSize("BTCUSDT")',
+            defaultValue: '0.00000100',
+        },
+        {
+            type: FieldType.Text,
+            name: 'price',
+            title: 'Coin price',
+            description: 'price("BTCUSDT")',
+            defaultValue: '62722.36000000',
+        },
+        {
+            type: FieldType.Line,
+            title: 'Computed',
+        },
+        {
+            type: FieldType.Text,
+            title: 'Total (readonly)',
+            compute: (data) => roundTicks(data.total * SLIDER_STEP, data.stepSize),
+        },
+        {
+            type: FieldType.Text,
+            title: 'Transaction fee (readonly)',
+            compute: (data) => `${roundTicks(data.total * SLIDER_STEP, data.stepSize) * data.price}$`,
+        },
+        {
+            type: FieldType.Line,
+            title: 'Slider',
+        },
+        {
+            type: FieldType.Slider,
+            title: 'Total',
+            name: 'total',
+            minSlider: 0,
+            maxSlider: 999,
+        },
+        {
+            type: FieldType.Typography,
+            typoVariant: 'subtitle1',
+            placeholder: `${SLIDER_STEP} per step`,
+        },
+    ];
+
+    const App = () => {
+        const [data, setData] = useState();
+
+        const handleGen = () => {
+            const {
+                total,
+                price,
+                stepSize,
+            } = data;
+            const quantity = roundTicks(data.total * SLIDER_STEP, data.stepSize);
+            const fee = quantity * data.price;
+            if (confirm(`Are you sure you want to spent ${fee}$?`)) {
+                const cmd = `await binance.order('BUY', 'BTCUSDT', '${quantity}', '${data.price}')`;
+                prompt('Should double check after copy', cmd);
+            }
+        };
+
+        const handleChange = (data, initial) => {
+            if (!initial) {
+                setData(data);
+            }
+        };
+
+        return (
+            <>
+                <Breadcrumbs
+                    saveLabel="Generate"
+                    currentTitle="Orders"
+                    backwardTitle="Create order"
+                    saveDisabled={!data}
+                    change
+                    save={handleGen}
+                />
+                <One
+                    change={handleChange}
+                    fields={fields}
+                    handler={data}
+                />
+            </>
+        );
+    };
+
+    ReactDOM.render(<App/>, document.querySelector('#root'));
+
+})();
+</script>
